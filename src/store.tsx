@@ -8,14 +8,30 @@ export type Project = {
 export type Member = {
   id: string;
   name: string;
-  projectId: string; // links the member to a project
+  projectId: string;
+};
+
+export type Task = {
+  id: string;
+  title: string;
+  dueDate: string; // format: YYYY-MM-DD
+  done: boolean;
+  projectId: string;
+  assignedMemberId: string;
 };
 
 type StoreType = {
   projects: Project[];
   members: Member[];
+  tasks: Task[];
   addProject: (name: string) => void;
   addMember: (name: string, projectId: string) => void;
+  addTask: (
+    title: string,
+    dueDate: string,
+    projectId: string,
+    assignedMemberId: string,
+  ) => void;
 };
 
 const StoreContext = createContext<StoreType | null>(null);
@@ -23,6 +39,7 @@ const StoreContext = createContext<StoreType | null>(null);
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
 
   function addProject(name: string) {
     const newProject: Project = { id: Date.now().toString(), name };
@@ -34,8 +51,27 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setMembers([...members, newMember]);
   }
 
+  function addTask(
+    title: string,
+    dueDate: string,
+    projectId: string,
+    assignedMemberId: string,
+  ) {
+    const newTask: Task = {
+      id: Date.now().toString(),
+      title,
+      dueDate,
+      done: false,
+      projectId,
+      assignedMemberId,
+    };
+    setTasks([...tasks, newTask]);
+  }
+
   return (
-    <StoreContext.Provider value={{ projects, members, addProject, addMember }}>
+    <StoreContext.Provider
+      value={{ projects, members, tasks, addProject, addMember, addTask }}
+    >
       {children}
     </StoreContext.Provider>
   );
