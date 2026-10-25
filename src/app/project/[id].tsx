@@ -1,4 +1,4 @@
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 import {
   Pressable,
@@ -21,13 +21,30 @@ function isValidDate(text: string) {
 
 export default function ProjectScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { projects, members, tasks, addMember, addTask } = useStore();
+  const router = useRouter();
+  const { projects, members, tasks, addMember, addTask, toggleTask } =
+    useStore();
 
   const [memberName, setMemberName] = useState("");
   const [taskTitle, setTaskTitle] = useState("");
   const [dueDate, setDueDate] = useState(todayString());
   const [selectedMemberId, setSelectedMemberId] = useState("");
   const [error, setError] = useState("");
+  const [currentMemberId, setCurrentMemberId] = useState("");
+  const [notice, setNotice] = useState("");
+
+  function handleToggle(task: { id: string; assignedMemberId: string }) {
+    if (currentMemberId === "") {
+      setNotice('Choose who you are first (see "I am" above).');
+      return;
+    }
+    if (currentMemberId !== task.assignedMemberId) {
+      setNotice("Only the assigned member can tick this task.");
+      return;
+    }
+    setNotice("");
+    toggleTask(task.id);
+  }
 
   const project = projects.find((p) => p.id === id);
   const projectMembers = members.filter((m) => m.projectId === id);
@@ -103,6 +120,50 @@ export default function ProjectScreen() {
         </View>
       ))}
 
+      <Pressable
+        style={[
+          styles.button,
+          styles.fullButton,
+          { backgroundColor: "#dc2626", marginTop: 20 },
+        ]}
+        onPress={() =>
+          router.push({ pathname: "/behind/[id]", params: { id } })
+        }
+      >
+        <Text style={styles.buttonText}>Who's behind?</Text>
+      </Pressable>
+
+      {/* ---------- Who am I ---------- */}
+      {projectMembers.length > 0 && (
+        <View style={{ marginTop: 20 }}>
+          <Text style={styles.hint}>I am:</Text>
+          <View style={styles.chips}>
+            {projectMembers.map((m) => {
+              const selected = m.id === currentMemberId;
+              return (
+                <Pressable
+                  key={m.id}
+                  style={[styles.chip, selected && styles.chipSelected]}
+                  onPress={() => {
+                    setCurrentMemberId(m.id);
+                    setNotice("");
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.chipText,
+                      selected && styles.chipTextSelected,
+                    ]}
+                  >
+                    {m.name}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+      )}
+
       {/* ---------- Tasks ---------- */}
       <Text style={[styles.section, { marginTop: 24 }]}>
         Tasks ({projectTasks.length})
@@ -161,12 +222,24 @@ export default function ProjectScreen() {
       {projectTasks.length === 0 && (
         <Text style={styles.empty}>No tasks yet.</Text>
       )}
+      {notice !== "" && <Text style={styles.error}>{notice}</Text>}
+
       {projectTasks.map((t) => (
-        <View key={t.id} style={styles.card}>
-          <Text style={styles.cardText}>{t.title}</Text>
-          <Text style={styles.cardSub}>
-            {memberNameFor(t.assignedMemberId)} · due {t.dueDate}
-          </Text>
+        <View key={t.id} style={[styles.card, styles.taskRow]}>
+          <Pressable
+            style={[styles.checkbox, t.done && styles.checkboxDone]}
+            onPress={() => handleToggle(t)}
+          >
+            {t.done && <Text style={styles.checkmark}>✓</Text>}
+          </Pressable>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.cardText, t.done && styles.doneText]}>
+              {t.title}
+            </Text>
+            <Text style={styles.cardSub}>
+              {memberNameFor(t.assignedMemberId)} · due {t.dueDate}
+            </Text>
+          </View>
         </View>
       ))}
     </ScrollView>
@@ -217,4 +290,17 @@ const styles = StyleSheet.create({
   chipText: { color: "#4f46e5" },
   chipTextSelected: { color: "#fff", fontWeight: "bold" },
   error: { color: "#dc2626", marginBottom: 10 },
+  taskRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  checkbox: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: "#4f46e5",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  checkboxDone: { backgroundColor: "#16a34a", borderColor: "#16a34a" },
+  checkmark: { color: "#fff", fontWeight: "bold" },
+  doneText: { textDecorationLine: "line-through", color: "#888" },
 });

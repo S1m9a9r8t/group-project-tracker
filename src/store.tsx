@@ -32,8 +32,8 @@ type StoreType = {
     projectId: string,
     assignedMemberId: string,
   ) => void;
+  toggleTask: (taskId: string) => void;
 };
-
 const StoreContext = createContext<StoreType | null>(null);
 
 export function StoreProvider({ children }: { children: ReactNode }) {
@@ -68,9 +68,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setTasks([...tasks, newTask]);
   }
 
+  function toggleTask(taskId: string) {
+    setTasks(tasks.map((t) => (t.id === taskId ? { ...t, done: !t.done } : t)));
+  }
+
   return (
     <StoreContext.Provider
-      value={{ projects, members, tasks, addProject, addMember, addTask }}
+      value={{
+        projects,
+        members,
+        tasks,
+        addProject,
+        addMember,
+        addTask,
+        toggleTask,
+      }}
     >
       {children}
     </StoreContext.Provider>
